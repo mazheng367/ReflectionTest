@@ -17,13 +17,36 @@ namespace ConsoleApp1
         static void Main(string[] args)
         {
             //object section = ConfigurationManager.GetSection("mySection");
-            var m1 = Type.GetType("ConsoleApp1.MyClass,ConsoleApp1").GetMethod("Add");
-            var m2 = Type.GetType("ConsoleApp1.MyClass2,ConsoleApp1").GetMethod("Add");
+            //var m1 = Type.GetType("ConsoleApp1.MyClass,ConsoleApp1").GetMethod("Add");
+            //var m2 = Type.GetType("ConsoleApp1.MyClass2,ConsoleApp1").GetMethod("Add");
 
-            Console.WriteLine(m1 == m2);
+            //Console.WriteLine(m1 == m2);
 
             //Console.WriteLine($"{type.FullName},{type.Assembly.GetName().Name}");
+
+            //FirstType firstType = new FirstType() {Name = "First Type"};
+
+            //SecondType secondType = firstType as SecondType;
+
+            int[] datas = new int[10] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+
             Console.ReadLine();
+        }
+    }
+
+    public class FirstType
+    {
+        public string Name { get; set; }
+    }
+
+    public class SecondType
+    {
+        public string Name { get; set; }
+
+        public static explicit operator SecondType(FirstType first)
+        {
+            return new SecondType() {Name = "转型自：" + first.Name};
         }
     }
 

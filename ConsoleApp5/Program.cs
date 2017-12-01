@@ -22,53 +22,75 @@ namespace ConsoleApp5
 
         static void Main(string[] args)
         {
-
             int count = 1000000;
             object[] container = new object[count];
-            Stopwatch w = new Stopwatch();
-            w.Start();
+
+            Type instance = typeof(MyClass);
+            var methodInfo = instance.GetMethod("Print2");
+            var cls1 = Activator.CreateInstance(instance);
+
+            Stopwatch w1 = new Stopwatch();
+            w1.Start();
             for (int i = 0; i < count; i++)
             {
-                Type instance = typeof(MyClass);
-                var methodInfo = instance.GetMethod("Print2");
-                var cls = Activator.CreateInstance(instance);
-                object o1 = methodInfo?.Invoke(cls, new object[] {"CCCCCCCCCCCCCCC"});
+                object o1 = methodInfo?.Invoke(cls1, new object[] {"CCCCCCCCCCCCCCC"});
                 container[i] = o1;
             }
 
-            w.Stop();
-            Console.WriteLine(w.Elapsed.ToString());
+            w1.Stop();
+            Console.WriteLine(w1.Elapsed.ToString());
             Console.WriteLine("-------------------------------------");
             Thread.Sleep(1000);
-            w.Reset();
-            w.Start();
+
+            var creator = GetCreator(instance);
+            var invoker = GetInvokers(instance, methodInfo);
+
+            var cls2 = creator();
+
+            Stopwatch w2 = new Stopwatch();
+            w2.Start();
 
             for (int i = 0; i < count; i++)
             {
-                Type instance = typeof(MyClass);
-                var methodInfo = instance.GetMethod("Print2");
-                var cls = GetCreator(instance)();
-                var invoker = GetInvokers(instance, methodInfo);
-                object o1 = invoker(cls, new object[] {"CCCCCCCCCCCCCCC"});
+                //Type instance = typeof(MyClass);
+                //var methodInfo = instance.GetMethod("Print2");
+
+                //var creator = GetCreator(instance);
+                //var invoker = GetInvokers(instance, methodInfo);
+                //var cls2 = creator();
+                object o1 = invoker(cls2, new Object[] {"CCCCCCCCCCCCCCC"});
                 container[i] = o1;
             }
 
-            w.Stop();
-            Console.WriteLine(w.Elapsed.ToString());
+            w2.Stop();
+            Console.WriteLine(w2.Elapsed.ToString());
 
-            Console.WriteLine("-------------------------------------");
-            Thread.Sleep(1000);
-            w.Reset();
+            //Console.WriteLine("------------------多线程环境-------------------");
+            //Console.WriteLine("-------------------------------------");
+            //Thread.Sleep(1000);
+            //w.Reset();
             //w.Start();
-            //Parallel.For(0, 10000000, (i) =>
+            //Parallel.For(0, count, (i) =>
             //{
             //    Type instance = typeof(MyClass);
             //    var methodInfo = instance.GetMethod("Print2");
-            //    //Type instance = typeof(MyClass);
-            //    //var methodInfo = instance.GetMethod("Print2");
-            //    //var invokers = GetInvokers(instance, methodInfo);
-            //    var cls = new MyClass();
-            //    object o1 = cls.Print2("CCCCCCCCCCCCCCC");
+            //    var cls = Activator.CreateInstance(instance);
+            //    object o1 = methodInfo?.Invoke(cls, new object[] { "CCCCCCCCCCCCCCC" });
+            //    container[i] = o1;
+            //});
+            //w.Stop();
+            //Console.WriteLine(w.Elapsed.ToString());
+            //Console.WriteLine("-------------------------------------");
+            //w.Reset();
+            //w.Start();
+            //Parallel.For(0, count, (i) =>
+            //{
+            //    Type instance = typeof(MyClass);
+            //    var methodInfo = instance.GetMethod("Print2");
+            //    var cls = GetCreator(instance)();
+            //    var invoker = GetInvokers(instance, methodInfo);
+            //    object o1 = invoker(cls, new object[] { "CCCCCCCCCCCCCCC" });
+            //    container[i] = o1;
             //});
             //w.Stop();
             //Console.WriteLine(w.Elapsed.ToString());
@@ -95,12 +117,12 @@ namespace ConsoleApp5
                     return paramInfo.ParameterType.IsValueType ? Expression.Convert(indexExpression, paramInfo.ParameterType) : Expression.TypeAs(indexExpression, paramInfo.ParameterType);
                 }).ToArray();
 
-                var cvtExpr = Expression.Convert(instanceExpr, instance);
+                var cvtExpr = Expression.TypeAs(instanceExpr, instance);
                 var callExpression = Expression.Call(cvtExpr, methodInfo, args);
 
                 var lambda = Expression.Lambda<Func<object, object[], object>>(Expression.Convert(callExpression, typeof(object)), instanceExpr, argsExpr);
                 invoker = lambda.Compile();
-                TypeCache.AddOrUpdate(methodInfo, invoker, (k, v) => invoker);
+                TypeCache.TryAdd(methodInfo, invoker);
             }
             return invoker;
         }
@@ -109,12 +131,12 @@ namespace ConsoleApp5
         {
             if (!MethodInfoCache.TryGetValue(instance, out Func<object> creator))
             {
-                DynamicMethod dm = new DynamicMethod("", typeof(object), Type.EmptyTypes);
+                DynamicMethod dm = new DynamicMethod("CreateObject", typeof(object), Type.EmptyTypes);
                 ILGenerator il = dm.GetILGenerator();
                 il.Emit(OpCodes.Newobj, instance.GetConstructor(Type.EmptyTypes));
                 il.Emit(OpCodes.Ret);
                 creator = (Func<object>) dm.CreateDelegate(typeof(Func<object>));
-                MethodInfoCache.AddOrUpdate(instance, creator, (k, v) => creator);
+                MethodInfoCache.TryAdd(instance, creator);
             }
             return creator;
         }
@@ -124,8 +146,9 @@ namespace ConsoleApp5
     {
         public MyClass()
         {
-            
+
         }
+
         public MyClass(string a, int b, object o)
         {
             this.T = a;
@@ -135,12 +158,17 @@ namespace ConsoleApp5
 
         public void Print(string a, int b, ref object o)
         {
-            
+
         }
-        public int Print2(string a)
+
+        public string Print2(string a)
         {
-            return 20;
+            //StringBuilder builder = new StringBuilder(a);
+            //builder.Append("asdasdasdasd");
+            //return builder.ToString();
+            return null;
         }
+
         public override string ToString()
         {
             return "My Class";
